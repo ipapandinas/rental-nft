@@ -11,11 +11,9 @@ import { useAppSelector } from "redux/hooks";
 
 const NftCreation = ({
   setError,
-  setIsAvailableForRent,
   setNft,
 }: {
   setError: React.Dispatch<React.SetStateAction<string>>;
-  setIsAvailableForRent: React.Dispatch<React.SetStateAction<boolean>>;
   setNft: React.Dispatch<React.SetStateAction<INFTExtended | undefined>>;
 }) => {
   const [file, setFile] = useState<TernoaFile | undefined>(undefined);
@@ -50,12 +48,10 @@ const NftCreation = ({
         offchainData,
         rentalContract: null,
       });
-      setIsAvailableForRent(true);
       setIsLoading(false);
     } catch (error: any) {
       console.log(error);
       setError(error?.message ?? JSON.stringify(error));
-      setIsAvailableForRent(false);
       setIsLoading(false);
     }
   };

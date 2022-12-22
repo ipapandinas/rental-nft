@@ -26,7 +26,7 @@
     "react-dom": "18.2.0",
     "react-drag-drop-files": "^2.3.8",
     "react-redux": "^8.0.5",
-    "ternoa-js": "^1.4.0",
+    "ternoa-js": "^1.4.1",
     "typescript": "4.9.4"
   }
 }

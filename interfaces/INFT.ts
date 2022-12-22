@@ -1,9 +1,11 @@
 import { IIpfsNftMetadata } from "./IIPFS";
 
 export interface IRentContract {
+  duration: number;
+  endBlock?: number;
   hasStarted: boolean;
   renter: string;
-  rentee: string | undefined;
+  rentee?: string;
 }
 
 export interface INFT {

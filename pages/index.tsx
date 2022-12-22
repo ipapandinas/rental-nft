@@ -6,17 +6,23 @@ import Enter from "components/base/Enter";
 import FlatRenting from "components/base/FlatRenting";
 import NftCreation from "components/base/NftCreation";
 import { INFTExtended } from "interfaces/INFT";
-import { getNft } from "lib/ternoa";
+import { getNftMetadata } from "lib/ternoa";
 import { middleEllipsis } from "lib/strings";
 import { useAppDispatch, useAppSelector } from "redux/hooks";
 import { actions as walletActions } from "redux/wallet/actions";
 
 import styles from "../styles/Home.module.css";
 import { TernoaIPFS } from "ternoa-js";
-import { IPFS_API_KEY, IPFS_URL, RENTAL_NFT_ID } from "lib/constants";
+import {
+  IPFS_API_KEY,
+  IPFS_URL,
+  RENTAL_NFT_OFFCHAIN_DATA,
+} from "lib/constants";
 import ContractCreation from "components/base/ContractCreation";
+import { subscribeCurrentBlockNumber } from "lib/crypto";
 
 export default function Home() {
+  const [currentBlock, setCurrentBlock] = useState(0);
   const [error, setError] = useState("");
   const [isAvailableForRent, setIsAvailableForRent] = useState(false);
   const [nft, setNft] = useState<INFTExtended | undefined>(undefined);
@@ -34,21 +40,37 @@ export default function Home() {
   const handleCloseAlert = () => setError("");
 
   useEffect(() => {
-    const loadNft = async (nftId: number) => {
+    const subToBlockNumber = async () => {
+      await subscribeCurrentBlockNumber(setCurrentBlock);
+    };
+
+    subToBlockNumber();
+  }, []);
+
+  useEffect(() => {
+    const loadNftMetadata = async (offchainData: string) => {
       const ipfsClient = new TernoaIPFS(new URL(IPFS_URL), IPFS_API_KEY);
       try {
-        const nftData = await getNft(nftId, ipfsClient);
-        setNft(nftData);
+        const nftMetadata = await getNftMetadata(offchainData, ipfsClient);
+        setNft((prevState) => prevState && { ...prevState, ...nftMetadata });
       } catch (error) {
         console.log(error);
       }
     };
 
-    const nftId = RENTAL_NFT_ID ?? nft?.nftId;
-    if (nftId) {
-      loadNft(nftId);
+    const offchainData = RENTAL_NFT_OFFCHAIN_DATA ?? nft?.offchainData;
+    if (offchainData) {
+      loadNftMetadata(offchainData);
     }
-  }, [nft?.nftId]);
+  }, [nft?.offchainData]);
+
+  useEffect(() => {
+    const contractEndingBlock = nft?.rentalContract?.endBlock;
+    if (contractEndingBlock && currentBlock > contractEndingBlock)
+      setNft(
+        (prevState) => prevState && { ...prevState, rentalContract: null }
+      );
+  }, [currentBlock, nft?.rentalContract?.endBlock]);
 
   return (
     <div className={styles.container}>
@@ -86,11 +108,7 @@ export default function Home() {
         </Box>
 
         {user.isConnected && nft === undefined && (
-          <NftCreation
-            setError={setError}
-            setIsAvailableForRent={setIsAvailableForRent}
-            setNft={setNft}
-          />
+          <NftCreation setError={setError} setNft={setNft} />
         )}
 
         {user.isConnected &&
@@ -98,6 +116,7 @@ export default function Home() {
           !isOwner &&
           (isRentee || isAvailableForRent) && (
             <FlatRenting
+              currentBlock={currentBlock}
               isAvailableForRent={isAvailableForRent}
               nft={nft}
               setError={setError}

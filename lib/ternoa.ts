@@ -1,4 +1,3 @@
-import request from "graphql-request";
 import {
   createNftTx,
   rentTx,
@@ -14,40 +13,29 @@ import {
   ContractStartedEvent,
   NFTCreatedEvent,
   ContractCreatedEvent,
+  formatDuration,
+  formatAcceptanceType,
+  formatCancellationFee,
+  formatRentFee,
 } from "ternoa-js";
 import { NftMetadataType } from "ternoa-js/helpers/types";
 
 import { IIpfsNftMetadata } from "interfaces/IIPFS";
-import { INFT, INFTExtended } from "interfaces/INFT";
 
-import { INDEXER_URL } from "./constants";
-import { getNFT } from "./graphql";
 import { signTx } from "./sign";
 
 /**
- * Gets an NFT and its metadata.
+ * Gets an NFT's metadata.
  *
- * @param id - The ID of the NFT to get.
+ * @param offchainData - The offchain data hash of the NFT.
  * @param ipfsClient - The Ternoa IPFS client to use for retrieving offchain data.
- * @returns The NFT and its metadata.
+ * @returns The NFT's metadata.
  */
-export const getNft = async (
-  id: number,
-  ipfsClient?: TernoaIPFS
-): Promise<INFTExtended> => {
-  const gql = getNFT(id);
-  const res: INFT = (await request(INDEXER_URL, gql)).nftEntity;
-  const { owner, nftId, offchainData, rentalContract } = res;
-  const ipfsRes =
-    ipfsClient &&
-    ((await ipfsClient.getFile(offchainData)) as IIpfsNftMetadata);
-  return {
-    owner,
-    nftId,
-    offchainData,
-    rentalContract,
-    ...ipfsRes,
-  };
+export const getNftMetadata = async (
+  offchainData: string,
+  ipfsClient: TernoaIPFS
+): Promise<IIpfsNftMetadata> => {
+  return (await ipfsClient.getFile(offchainData)) as IIpfsNftMetadata;
 };
 
 /**
@@ -116,19 +104,21 @@ export const createNft = async (
  * @throws {Error} If the transaction fails or the `ContractCreatedEvent` is not found.
  */
 export const createContract = async (id: number, address: string) => {
+  const duration = formatDuration("fixed", 20);
+  const acceptanceType = formatAcceptanceType("auto");
+  const rentFee = formatRentFee("tokens", 1);
+  const cancellationFee = formatCancellationFee("none");
+
   const tx = await createContractTx(
     id,
-    {
-      fixed: 20,
-    },
-    {
-      autoAcceptance: null,
-    },
+    duration,
+    acceptanceType,
     false,
-    { tokens: 1 },
-    { fixedTokens: 100 },
-    { fixedTokens: 100 }
+    rentFee,
+    cancellationFee,
+    cancellationFee
   );
+
   const { events } = await genericSign(tx, address);
   return genericTxnCheck(events, ContractCreatedEvent);
 };

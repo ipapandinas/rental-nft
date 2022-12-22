@@ -1,20 +1,21 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
-import { Box, Button, CircularProgress, Typography } from "@mui/material";
+import { Box, Button, CircularProgress } from "@mui/material";
 
 import { INFTExtended } from "interfaces/INFT";
-import { IPFS_API_KEY, IPFS_URL, RENTAL_NFT_ID } from "lib/constants";
-import { getNft, rentNft } from "lib/ternoa";
+import { IPFS_URL } from "lib/constants";
+import { rentNft } from "lib/ternoa";
 import { useAppSelector } from "redux/hooks";
-import { TernoaIPFS } from "ternoa-js";
 
 const FlatRenting = ({
+  currentBlock,
   isAvailableForRent,
   nft,
   setError,
   setIsAvailableForRent,
   setNft,
 }: {
+  currentBlock: number;
   isAvailableForRent: boolean;
   nft: INFTExtended;
   setError: React.Dispatch<React.SetStateAction<string>>;
@@ -32,17 +33,20 @@ const FlatRenting = ({
       const rentData = await rentNft(Number(nftId), user.address);
       console.log({ rentData });
       const { rentee } = rentData;
-      setNft(
-        (prevState) =>
+      setNft((prevState) => {
+        const duration = prevState?.rentalContract?.duration;
+        return (
           prevState && {
             ...prevState,
             rentalContract: prevState.rentalContract && {
               ...prevState.rentalContract,
+              endBlock: prevState.rentalContract.duration + currentBlock,
               hasStarted: true,
               rentee,
             },
           }
-      );
+        );
+      });
       setIsAvailableForRent(false);
       setIsLoading(false);
     } catch (error: any) {
@@ -51,23 +55,6 @@ const FlatRenting = ({
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    const loadNft = async (nftId: number) => {
-      const ipfsClient = new TernoaIPFS(new URL(IPFS_URL), IPFS_API_KEY);
-      try {
-        const nftData = await getNft(nftId, ipfsClient);
-        setNft(nftData);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-
-    const nftId = RENTAL_NFT_ID ?? nft?.nftId;
-    if (nftId) {
-      loadNft(nftId);
-    }
-  }, [nft?.nftId, setNft]);
 
   return (
     <Box

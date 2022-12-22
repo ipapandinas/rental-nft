@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button, CircularProgress } from "@mui/material";
+import { DurationFixedType } from "ternoa-js";
 
 import { INFTExtended } from "interfaces/INFT";
 import { createContract } from "lib/ternoa";
@@ -24,12 +25,14 @@ const ContractCreation = ({
       setIsLoading(true);
       const contractData = await createContract(nftId, user.address);
       console.log({ contractData });
-      const { renter } = contractData;
+      const { duration, renter } = contractData;
+      const { fixed } = duration as DurationFixedType;
       setNft(
         (prevState) =>
           prevState && {
             ...prevState,
             rentalContract: {
+              duration: fixed,
               hasStarted: false,
               renter,
               rentee: undefined,
